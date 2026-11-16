@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Разделитель текста по файлам</title>
-    <!-- Подключаем JSZip из CDN -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         body {
@@ -31,9 +30,6 @@
             padding: 2rem;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-            max-width: 600px;
-            margin: auto;
-}
         }
         input[type="file"] {
             display: block;
@@ -59,7 +55,11 @@
             min-height: 3rem;
             white-space: pre-wrap;
             word-break: break-word;
+            font-size: 0.92rem;
         }
+        #status .error { color: #b91c1c; }
+        #status .warn { color: #b45309; }
+        #status .ok { color: #15803d; }
         #downloadBtn {
             background: #0f172a;
             color: white;
@@ -73,9 +73,13 @@
             display: none;
             margin-top: 0.5rem;
         }
-        #downloadBtn:hover {
+        #downloadBtn:hover:not(:disabled) {
             background: #1e293b;
             transform: scale(1.02);
+        }
+        #downloadBtn:disabled {
+            opacity: 0.6;
+            cursor: wait;
         }
         .hint {
             font-size: 0.9rem;
@@ -89,15 +93,19 @@
 <body>
 <div class="container">
     <h1>✂️ Разделитель по меткам</h1>
-    <p>Загрузите текстовый файл с метками вида <br><code>&lt;!-- FILE: chapter1.txt --&gt;</code></p>
+    <p>Загрузите один или несколько текстовых файлов с метками вида<br>
+       <code>&lt;!-- FILE: chapter1.txt --&gt;</code></p>
 
-    <input type="file" id="fileInput" accept=".txt,.md,.html,.json,.js,.py,.c,.cpp,.java,.xml,.yaml,.yml,.toml,.csv,.tsv,.log,.sh,.bat,.ps1,.pl,.rb,.go,.rs,.swift,.kt,.scala,.clj,.lisp,.sql,.r,.jl,.tex,.bib">
+    <input type="file" id="fileInput" multiple
+           accept=".txt,.md,.html,.json,.js,.py,.c,.cpp,.java,.xml,.yaml,.yml,.toml,.csv,.tsv,.log,.sh,.bat,.ps1,.pl,.rb,.go,.rs,.swift,.kt,.scala,.clj,.lisp,.sql,.r,.jl,.tex,.bib">
 
     <div id="status">⏳ Ожидание загрузки…</div>
     <button id="downloadBtn">📦 Скачать ZIP-архив</button>
 
     <div class="hint">
-        <strong>Как работает:</strong> текст до первой метки игнорируется. Всё между метками становится содержимым соответствующего файла. После последней метки текст также добавляется в последний файл.
+        <strong>Как работает:</strong>
+        каждый выбранный файл разбирается отдельно; текст до первой метки в каждом файле игнорируется. Все найденные фрагменты из всех файлов упаковываются в <em>один</em> ZIP.
+        Если несколько фрагментов имеют одинаковое имя, к последующим добавляется суффикс <code>_2</code>, <code>_3</code>…
     </div>
 </div>
 
@@ -107,53 +115,116 @@
         const statusDiv = document.getElementById('status');
         const downloadBtn = document.getElementById('downloadBtn');
 
-        let parsedFiles = []; // массив объектов {filename, content}
+        let parsedFiles = []; // массив {filename, content, source}
 
-        fileInput.addEventListener('change', function(e) {
-            const file = this.files[0];
-            if (!file) return;
+        fileInput.addEventListener('change', async function() {
+            const files = Array.from(this.files);
+            if (files.length === 0) return;
 
-            statusDiv.textContent = '📖 Чтение файла…';
-            const reader = new FileReader();
+            parsedFiles = [];
+            downloadBtn.style.display = 'none';
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = '📦 Скачать ZIP-архив';
 
-            reader.onload = function(event) {
-                statusDiv.textContent = '⚙️ Обработка…';
+            const usedNames = new Set();
+            const report = [];
+            let totalFragments = 0;
+            let renamedCount = 0;
+
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                statusDiv.textContent = `📖 Чтение ${i + 1}/${files.length}: ${file.name}…`;
+
                 try {
-                    const text = event.target.result;
-                    parsedFiles = parseTextToFiles(text);
-                    const count = parsedFiles.length;
-                    if (count > 0) {
-                        statusDiv.textContent = `✅ Найдено файлов: ${count}`;
-                        downloadBtn.style.display = 'inline-block';
-                    } else {
-                        statusDiv.textContent = '⚠️ Меток не найдено. Проверьте формат: <!-- FILE: имя -->';
-                        downloadBtn.style.display = 'none';
+                    const text = await readFileAsText(file);
+                    const fragments = parseTextToFiles(text);
+
+                    if (fragments.length === 0) {
+                        report.push(`⚠️ ${file.name}: меток не найдено`);
+                        continue;
                     }
+
+                    for (const frag of fragments) {
+                        const baseName = (frag.filename || 'unnamed.txt').trim() || 'unnamed.txt';
+                        const { name, renamed } = uniqueName(baseName, usedNames);
+                        if (renamed) renamedCount++;
+                        parsedFiles.push({
+                            filename: name,
+                            content: frag.content,
+                            source: file.name
+                        });
+                        totalFragments++;
+                    }
+
+                    report.push(`✅ ${file.name}: ${fragments.length} фрагмент(ов)`);
                 } catch (err) {
-                    statusDiv.textContent = '❌ Ошибка: ' + err.message;
-                    downloadBtn.style.display = 'none';
+                    report.push(`❌ ${file.name}: ошибка — ${err.message}`);
                 }
-            };
+            }
 
-            reader.onerror = function() {
-                statusDiv.textContent = '❌ Ошибка чтения файла';
-                downloadBtn.style.display = 'none';
-            };
+            // Итоговый отчёт
+            statusDiv.innerHTML = '';
+            report.forEach(line => {
+                const div = document.createElement('div');
+                if (line.startsWith('✅')) div.className = 'ok';
+                else if (line.startsWith('⚠️')) div.className = 'warn';
+                else if (line.startsWith('❌')) div.className = 'error';
+                div.textContent = line;
+                statusDiv.appendChild(div);
+            });
 
-            reader.readAsText(file, 'UTF-8');
+            if (totalFragments > 0) {
+                const summary = document.createElement('div');
+                summary.style.marginTop = '0.5rem';
+                summary.style.fontWeight = '600';
+                let summaryText = `Всего файлов во входе: ${files.length}. Найдено фрагментов: ${totalFragments}.`;
+                if (renamedCount > 0) {
+                    summaryText += ` Переименовано дубликатов: ${renamedCount}.`;
+                }
+                summary.textContent = summaryText;
+                statusDiv.appendChild(summary);
+                downloadBtn.style.display = 'inline-block';
+            }
         });
+
+        function readFileAsText(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = e => resolve(e.target.result);
+                reader.onerror = () => reject(new Error('не удалось прочитать файл'));
+                reader.readAsText(file, 'UTF-8');
+            });
+        }
+
+        /**
+         * Возвращает уникальное имя. Если имя уже занято — добавляет _2, _3 и т.д.
+         */
+        function uniqueName(baseName, usedNames) {
+            if (!usedNames.has(baseName)) {
+                usedNames.add(baseName);
+                return { name: baseName, renamed: false };
+            }
+            const dot = baseName.lastIndexOf('.');
+            const stem = dot > 0 ? baseName.slice(0, dot) : baseName;
+            const ext  = dot > 0 ? baseName.slice(dot)   : '';
+            let i = 2;
+            let candidate;
+            do {
+                candidate = `${stem}_${i}${ext}`;
+                i++;
+            } while (usedNames.has(candidate));
+            usedNames.add(candidate);
+            return { name: candidate, renamed: true };
+        }
 
         /**
          * Разбирает текст на фрагменты по меткам <!-- FILE: имя -->
-         * @param {string} text - исходный текст
-         * @returns {Array<{filename: string, content: string}>}
          */
         function parseTextToFiles(text) {
             const regex = /<!--\s*FILE:\s*([^>]+?)\s*-->/gi;
             const matches = [];
             let match;
 
-            // Собираем все метки с позициями
             while ((match = regex.exec(text)) !== null) {
                 matches.push({
                     index: match.index,
@@ -164,66 +235,68 @@
 
             if (matches.length === 0) return [];
 
-            const files = [];
+            const out = [];
             for (let i = 0; i < matches.length; i++) {
-                const current = matches[i];
-                const start = current.endIndex;                 // сразу после -->
-                const end = (i + 1 < matches.length)
-                    ? matches[i + 1].index                      // до начала следующей метки
-                    : text.length;                              // до конца файла
-                const content = text.substring(start, end);
-                files.push({
-                    filename: current.filename || 'unnamed.txt',
-                    content: content
+                const start = matches[i].endIndex;
+                const end   = (i + 1 < matches.length)
+                    ? matches[i + 1].index
+                    : text.length;
+                out.push({
+                    filename: matches[i].filename || 'unnamed.txt',
+                    content: text.substring(start, end)
                 });
             }
-            return files;
+            return out;
         }
 
-        downloadBtn.addEventListener('click', function() {
+        downloadBtn.addEventListener('click', async function() {
             if (parsedFiles.length === 0) {
                 alert('Нет файлов для упаковки');
                 return;
             }
 
             const zip = new JSZip();
-            for (const file of parsedFiles) {
-                // Защита от пустых имён
-                const fname = file.filename.trim() || 'unnamed.txt';
-                zip.file(fname, file.content);
+            for (const f of parsedFiles) {
+                zip.file(f.filename, f.content);
             }
 
-            statusDiv.textContent = '📦 Создание ZIP-архива…';
             downloadBtn.disabled = true;
             downloadBtn.textContent = '⏳ Создаётся…';
+            const prevStatus = statusDiv.innerHTML;
+            statusDiv.textContent = '📦 Создание ZIP-архива…';
 
-            zip.generateAsync({ type: 'blob' })
-                .then(function(blob) {
-                    // Скачивание через ссылку (без FileSaver)
-                    const link = document.createElement('a');
-                    link.href = URL.createObjectURL(blob);
-                    link.download = 'разделенные_файлы.zip';
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+            try {
+                const blob = await zip.generateAsync({ type: 'blob' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'разделенные_файлы.zip';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(link.href), 10000);
 
-                    statusDiv.textContent = `✅ Архив создан. Скачано ${parsedFiles.length} файлов.`;
-                    downloadBtn.disabled = false;
-                    downloadBtn.textContent = '📦 Скачать ZIP-архив';
-                })
-                .catch(function(err) {
-                    statusDiv.textContent = '❌ Ошибка создания ZIP: ' + err.message;
-                    downloadBtn.disabled = false;
-                    downloadBtn.textContent = '📦 Скачать ZIP-архив';
-                });
+                statusDiv.innerHTML = prevStatus;
+                const done = document.createElement('div');
+                done.className = 'ok';
+                done.style.fontWeight = '600';
+                done.textContent = `✅ Архив скачан (${parsedFiles.length} файлов).`;
+                statusDiv.appendChild(done);
+            } catch (err) {
+                statusDiv.innerHTML = prevStatus;
+                const er = document.createElement('div');
+                er.className = 'error';
+                er.textContent = '❌ Ошибка создания ZIP: ' + err.message;
+                statusDiv.appendChild(er);
+            } finally {
+                downloadBtn.disabled = false;
+                downloadBtn.textContent = '📦 Скачать ZIP-архив';
+            }
         });
 
-        // Сброс состояния при повторной загрузке файла
+        // Разрешаем повторно выбрать те же файлы
         fileInput.addEventListener('click', function() {
-            this.value = null; // разрешаем повторный выбор того же файла
+            this.value = null;
         });
-
     })();
 </script>
 </body>
