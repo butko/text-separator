@@ -2,10 +2,12 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
+    <!-- index.html — версия v1.1 -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Разделитель текста по файлам</title>
+    <title>Разделитель текста по меткам</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
+        *, *::before, *::after { box-sizing: border-box; }
         body {
             font-family: system-ui, -apple-system, sans-serif;
             max-width: 700px;
@@ -15,21 +17,20 @@
             background: #f8f9fa;
             color: #1e293b;
         }
-        h1 {
-            font-size: 1.8rem;
-            font-weight: 600;
-        }
+        h1 { font-size: 1.8rem; font-weight: 600; }
         code {
             background: #e9ecef;
             padding: 0.2rem 0.4rem;
             border-radius: 4px;
             font-size: 0.9rem;
+            overflow-wrap: anywhere;
         }
         .container {
             background: white;
             padding: 2rem;
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            max-width: 100%;
         }
         input[type="file"] {
             display: block;
@@ -38,15 +39,12 @@
             border: 2px dashed #cbd5e1;
             border-radius: 8px;
             width: 100%;
-            box-sizing: border-box;
-            cursor: pointer;
+            max-width: 100%;
             background: #f1f5f9;
+            cursor: pointer;
             transition: 0.2s;
         }
-        input[type="file"]:hover {
-            border-color: #94a3b8;
-            background: #e9edf3;
-        }
+        input[type="file"]:hover { border-color: #94a3b8; background: #e9edf3; }
         #status {
             margin: 1rem 0;
             padding: 0.8rem;
@@ -55,8 +53,11 @@
             min-height: 3rem;
             white-space: pre-wrap;
             word-break: break-word;
+            overflow-wrap: anywhere;
             font-size: 0.92rem;
+            max-width: 100%;
         }
+        #status div { overflow-wrap: anywhere; }
         #status .error { color: #b91c1c; }
         #status .warn { color: #b45309; }
         #status .ok { color: #15803d; }
@@ -72,21 +73,17 @@
             transition: 0.2s;
             display: none;
             margin-top: 0.5rem;
+            max-width: 100%;
         }
-        #downloadBtn:hover:not(:disabled) {
-            background: #1e293b;
-            transform: scale(1.02);
-        }
-        #downloadBtn:disabled {
-            opacity: 0.6;
-            cursor: wait;
-        }
+        #downloadBtn:hover:not(:disabled) { background: #1e293b; transform: scale(1.02); }
+        #downloadBtn:disabled { opacity: 0.6; cursor: wait; }
         .hint {
             font-size: 0.9rem;
             color: #475569;
             margin-top: 1rem;
             border-top: 1px solid #e2e8f0;
             padding-top: 1rem;
+            overflow-wrap: anywhere;
         }
     </style>
 </head>
@@ -115,7 +112,7 @@
         const statusDiv = document.getElementById('status');
         const downloadBtn = document.getElementById('downloadBtn');
 
-        let parsedFiles = []; // массив {filename, content, source}
+        let parsedFiles = [];
 
         fileInput.addEventListener('change', async function() {
             const files = Array.from(this.files);
@@ -162,7 +159,6 @@
                 }
             }
 
-            // Итоговый отчёт
             statusDiv.innerHTML = '';
             report.forEach(line => {
                 const div = document.createElement('div');
@@ -196,9 +192,6 @@
             });
         }
 
-        /**
-         * Возвращает уникальное имя. Если имя уже занято — добавляет _2, _3 и т.д.
-         */
         function uniqueName(baseName, usedNames) {
             if (!usedNames.has(baseName)) {
                 usedNames.add(baseName);
@@ -217,9 +210,6 @@
             return { name: candidate, renamed: true };
         }
 
-        /**
-         * Разбирает текст на фрагменты по меткам <!-- FILE: имя -->
-         */
         function parseTextToFiles(text) {
             const regex = /<!--\s*FILE:\s*([^>]+?)\s*-->/gi;
             const matches = [];
@@ -293,7 +283,6 @@
             }
         });
 
-        // Разрешаем повторно выбрать те же файлы
         fileInput.addEventListener('click', function() {
             this.value = null;
         });
