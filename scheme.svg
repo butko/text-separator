@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- scheme.svg — версия v1.0. Схема работы инструмента «Разделитель текста по меткам». -->
+<svg xmlns="http://www.w3.org/2000/svg" width="600" height="740" viewBox="0 0 600 740"
+     font-family="system-ui, -apple-system, 'Segoe UI', Arial, sans-serif" font-size="14">
+  <title>Схема работы: разделитель текста по меткам</title>
+
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5"
+            markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
+    </marker>
+  </defs>
+
+  <!-- A. Открытие инструмента -->
+  <rect x="160" y="20" width="400" height="46" rx="8" fill="#f1f5f9" stroke="#334155" stroke-width="1.5"/>
+  <text x="360" y="49" text-anchor="middle" fill="#0f172a">Пользователь открывает index.html</text>
+
+  <!-- A -> B -->
+  <line x1="360" y1="66" x2="360" y2="88" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- B. Выбор файлов -->
+  <rect x="160" y="90" width="400" height="46" rx="8" fill="#f1f5f9" stroke="#334155" stroke-width="1.5"/>
+  <text x="360" y="119" text-anchor="middle" fill="#0f172a">Выбор одного или нескольких файлов</text>
+
+  <!-- B -> C -->
+  <line x1="360" y1="136" x2="360" y2="158" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- C. Чтение -->
+  <rect x="160" y="160" width="400" height="46" rx="8" fill="#f1f5f9" stroke="#334155" stroke-width="1.5"/>
+  <text x="360" y="189" text-anchor="middle" fill="#0f172a">FileReader: чтение как UTF-8</text>
+
+  <!-- C -> D -->
+  <line x1="360" y1="206" x2="360" y2="228" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- D. Поиск меток -->
+  <rect x="160" y="230" width="400" height="46" rx="8" fill="#f1f5f9" stroke="#334155" stroke-width="1.5"/>
+  <text x="360" y="259" text-anchor="middle" fill="#0f172a">Поиск меток FILE регулярным выражением</text>
+
+  <!-- D -> E -->
+  <line x1="360" y1="276" x2="360" y2="298" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- E. Решение -->
+  <polygon points="360,300 490,340 360,380 230,340" fill="#fff7ed" stroke="#b45309" stroke-width="1.5"/>
+  <text x="360" y="345" text-anchor="middle" fill="#0f172a">Метки найдены?</text>
+
+  <!-- E -> F (нет) -->
+  <line x1="230" y1="340" x2="192" y2="340" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="211" y="332" text-anchor="middle" fill="#b45309" font-size="13">нет</text>
+
+  <!-- F. Меток не найдено -->
+  <rect x="20" y="317" width="170" height="46" rx="8" fill="#fef2f2" stroke="#b91c1c" stroke-width="1.5"/>
+  <text x="105" y="346" text-anchor="middle" fill="#0f172a">Меток не найдено</text>
+
+  <!-- E -> G (да) -->
+  <line x1="360" y1="380" x2="360" y2="438" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="369" y="414" fill="#15803d" font-size="13">да</text>
+
+  <!-- G. Нарезка -->
+  <rect x="160" y="440" width="400" height="46" rx="8" fill="#f1f5f9" stroke="#334155" stroke-width="1.5"/>
+  <text x="360" y="469" text-anchor="middle" fill="#0f172a">Нарезка текста по меткам</text>
+
+  <!-- G -> H -->
+  <line x1="360" y1="486" x2="360" y2="508" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- H. Коллизии имён -->
+  <rect x="160" y="510" width="400" height="46" rx="8" fill="#f1f5f9" stroke="#334155" stroke-width="1.5"/>
+  <text x="360" y="539" text-anchor="middle" fill="#0f172a">Разрешение коллизий имён: _2, _3, ...</text>
+
+  <!-- H -> I -->
+  <line x1="360" y1="556" x2="360" y2="578" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- I. ZIP -->
+  <rect x="160" y="580" width="400" height="46" rx="8" fill="#f1f5f9" stroke="#334155" stroke-width="1.5"/>
+  <text x="360" y="609" text-anchor="middle" fill="#0f172a">JSZip: упаковка в один архив</text>
+
+  <!-- I -> J -->
+  <line x1="360" y1="626" x2="360" y2="648" stroke="#334155" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- J. Скачивание -->
+  <rect x="160" y="650" width="400" height="46" rx="8" fill="#dcfce7" stroke="#15803d" stroke-width="1.5"/>
+  <text x="360" y="679" text-anchor="middle" fill="#0f172a">Скачивание ZIP через ссылку-blob</text>
+</svg>
